@@ -1,0 +1,333 @@
+/* =========================================================
+   PRO MEBEL — система отзывов
+   Токены: тёплый берёзовый фон, орех для текста, фирменный
+   оранжевый Pro Mebel (#FF6600) как единственный яркий акцент.
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+:root {
+  --bg: #FAF6EF;
+  --surface: #FFFFFF;
+  --ink: #241E18;
+  --ink-soft: #6E6353;
+  --line: #E7DFCF;
+
+  --accent: #FF6600;
+  --accent-deep: #C24C10;
+  --accent-soft: #FFE3CC;
+  --success: #3C8F5C;
+  --success-soft: #DFF1E6;
+  --danger: #C0392B;
+
+  --font-display: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --radius: 18px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+a { color: inherit; }
+
+.wrap {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 28px 20px 40px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Шапка бренда ---------- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.brand__mark {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--accent);
+  position: relative;
+  flex: none;
+}
+.brand__mark::after {
+  content: "";
+  position: absolute; inset: 7px;
+  border-radius: 4px;
+  background: var(--surface);
+  opacity: .9;
+}
+.brand__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.brand__tag {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  letter-spacing: .03em;
+}
+
+/* ---------- "Кромка" — фирменный разделитель, отсылка к
+   кромкооблицовке мебельных плит ---------- */
+.edgeband {
+  height: 6px;
+  border-radius: 4px;
+  margin: 22px 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent) 0 14px,
+    var(--accent-soft) 14px 20px
+  );
+  opacity: .9;
+}
+
+/* ---------- Карточка ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px 22px;
+  box-shadow: 0 1px 2px rgba(36,30,24,.04);
+}
+
+.employee {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+.employee__avatar {
+  width: 54px; height: 54px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  flex: none;
+}
+.employee__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1.2;
+}
+.employee__meta {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 20px 0 10px;
+}
+
+/* ---------- Рейтинг: "образцы материалов" вместо звёзд ----------
+   5 карточек-свотчей, как в шоуруме мебельных материалов:
+   градация от светлого к глубокому фирменному оранжевому. */
+.swatches {
+  display: flex;
+  gap: 8px;
+}
+.swatch {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  transition: transform .12s ease, border-color .12s ease, background .12s ease, color .12s ease;
+}
+.swatch:hover { transform: translateY(-2px); }
+.swatch.is-filled {
+  border-color: transparent;
+  color: rgba(255,255,255,.9);
+}
+/* Градация заливки 1..5 */
+.swatch.is-filled[data-v="1"] { background: #FFC299; }
+.swatch.is-filled[data-v="2"] { background: #FFA669; }
+.swatch.is-filled[data-v="3"] { background: #FF8A3D; }
+.swatch.is-filled[data-v="4"] { background: #FF6600; }
+.swatch.is-filled[data-v="5"] { background: #C24C10; }
+
+.swatches-caption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+textarea, input, select {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 15px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 13px;
+  background: var(--bg);
+  color: var(--ink);
+  resize: vertical;
+}
+textarea:focus, input:focus, select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+textarea { min-height: 84px; }
+
+label { font-size: 13px; color: var(--ink-soft); }
+
+.btn {
+  appearance: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity .15s ease, transform .1s ease;
+}
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn--primary { background: var(--accent); color: #fff; }
+.btn--primary:hover:not(:disabled) { background: var(--accent-deep); }
+.btn--ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+
+.hint { font-size: 12px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; }
+.error-text { font-size: 13px; color: var(--danger); margin-top: 8px; display: none; }
+.error-text.show { display: block; }
+
+/* ---------- Состояния (успех / уже оценено / недоступно) ---------- */
+.state {
+  text-align: center;
+  padding: 20px 4px 4px;
+}
+.state__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  margin: 18px 0 6px;
+}
+.state__text {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Плейсхолдер под анимацию (Storyset и т.п.) — заполняется вручную */
+.illustration-slot {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 4 / 3;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.illustration-slot[data-note]::after {
+  content: attr(data-note);
+  position: absolute;
+  bottom: -18px;
+  left: 0; right: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  opacity: .55;
+  text-align: center;
+}
+
+/* Встроенная запасная анимация — галочка, рисуется контуром */
+.check-fallback circle {
+  fill: none;
+  stroke: var(--success);
+  stroke-width: 4;
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  animation: draw .5s ease forwards;
+}
+.check-fallback path {
+  fill: none;
+  stroke: var(--success);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: draw .35s .45s ease forwards;
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Запасная анимация — замок для "нет доступа" */
+.lock-fallback { opacity: 0; animation: fade-in .4s ease forwards; }
+@keyframes fade-in { to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .check-fallback circle, .check-fallback path, .lock-fallback { animation: none !important; }
+}
+
+.footer-note {
+  margin-top: auto;
+  padding-top: 24px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  opacity: .7;
+}
+
+.list { display: flex; flex-direction: column; gap: 10px; }
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.list-item:hover { border-color: var(--accent); }

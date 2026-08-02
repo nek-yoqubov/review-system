@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Оцените консультацию — Pro Mebel</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand__mark"></div>
+      <div>
+        <div class="brand__name">Pro Mebel</div>
+        <div class="brand__tag">Оценка консультации</div>
+      </div>
+    </div>
+    <div class="edgeband"></div>
+
+    <!-- ===== Состояние: загрузка ===== -->
+    <div id="state-loading" class="card">
+      <div class="state">
+        <p class="state__text">Загружаем анкету…</p>
+      </div>
+    </div>
+
+    <!-- ===== Состояние: форма отзыва ===== -->
+    <div id="state-form" class="card" style="display:none;">
+      <div class="employee">
+        <div class="employee__avatar" id="emp-initials">—</div>
+        <div>
+          <div class="employee__name" id="emp-name">—</div>
+          <div class="employee__meta" id="emp-meta">—</div>
+        </div>
+      </div>
+
+      <div class="section-label">Оцените консультацию</div>
+      <div class="swatches" id="swatches">
+        <button class="swatch" type="button" data-v="1">1</button>
+        <button class="swatch" type="button" data-v="2">2</button>
+        <button class="swatch" type="button" data-v="3">3</button>
+        <button class="swatch" type="button" data-v="4">4</button>
+        <button class="swatch" type="button" data-v="5">5</button>
+      </div>
+      <div class="swatches-caption"><span>слабо</span><span>отлично</span></div>
+
+      <div class="section-label">Комментарий (необязательно)</div>
+      <textarea id="comment" placeholder="Что понравилось или что стоит улучшить?" maxlength="500"></textarea>
+
+      <div class="error-text" id="form-error"></div>
+
+      <div style="margin-top:18px;">
+        <button class="btn btn--primary" id="submit-btn" disabled>Отправить оценку</button>
+      </div>
+      <p class="hint">Отзыв анонимный для клиента. Один отзыв с устройства на сотрудника — раз в сутки.</p>
+    </div>
+
+    <!-- ===== Состояние: спасибо ===== -->
+    <div id="state-thanks" class="card" style="display:none;">
+      <div class="state">
+        <div class="illustration-slot" data-note="storyset.com: анимация 'thank you' / 'success' — вставьте сюда">
+          <svg class="check-fallback" width="96" height="96" viewBox="0 0 96 96">
+            <circle cx="48" cy="48" r="34"/>
+            <path d="M32 49 L43 60 L66 36"/>
+          </svg>
+        </div>
+        <div class="state__title">Спасибо!</div>
+        <div class="state__text">Ваша оценка передана. Она поможет нам стать лучше.</div>
+      </div>
+    </div>
+
+    <!-- ===== Состояние: уже оценивали сегодня ===== -->
+    <div id="state-already" class="card" style="display:none;">
+      <div class="state">
+        <div class="illustration-slot" data-note="storyset.com: анимация 'already done' — вставьте сюда">
+          <svg class="check-fallback" width="96" height="96" viewBox="0 0 96 96">
+            <circle cx="48" cy="48" r="34"/>
+            <path d="M32 49 L43 60 L66 36"/>
+          </svg>
+        </div>
+        <div class="state__title">Вы уже оценивали сегодня</div>
+        <div class="state__text">Спасибо за отзыв! Следующую оценку этому сотруднику можно оставить завтра.</div>
+      </div>
+    </div>
+
+    <!-- ===== Состояние: нет доступа / сотрудник неактивен / битая ссылка ===== -->
+    <div id="state-unavailable" class="card" style="display:none;">
+      <div class="state">
+        <div class="illustration-slot" data-note="storyset.com: анимация 'no access' / '404' — вставьте сюда">
+          <svg class="lock-fallback" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#6E6353" stroke-width="1.6">
+            <rect x="5" y="11" width="14" height="9" rx="2"/>
+            <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+          </svg>
+        </div>
+        <div class="state__title">Анкета недоступна</div>
+        <div class="state__text" id="unavailable-text">Ссылка устарела или сотрудник больше не работает в Pro Mebel.</div>
+      </div>
+    </div>
+
+    <div class="footer-note">Pro Mebel · Худжанд · Душанбе</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase-client.js"></script>
+  <script src="assets/js/review.js"></script>
+</body>
+</html>

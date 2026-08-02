@@ -1,0 +1,84 @@
+.admin-app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 28px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.admin-tabs { display: flex; gap: 6px; flex: 1; }
+.admin-tab {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.admin-tab.is-active { background: var(--accent-soft); color: var(--accent-deep); }
+
+.admin-main { padding: 24px 28px 48px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+.admin-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.admin-panel-head h2 { font-family: var(--font-display); font-size: 20px; margin: 0; }
+
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--ink-soft);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.admin-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: none; }
+
+.badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-family: var(--font-mono); }
+.badge--active { background: var(--success-soft); color: var(--success); }
+.badge--inactive { background: #F1EDE4; color: var(--ink-soft); }
+.badge--flag { background: #FBE4E1; color: var(--danger); }
+
+.row-actions { display: flex; gap: 8px; }
+/* viewer видит данные, но не может редактировать сотрудников */
+.role-viewer .row-actions button[data-action="edit"],
+.role-viewer .row-actions button[data-action="toggle"] { display: none; }
+.row-actions button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.row-actions button:hover { border-color: var(--accent); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.filters select { width: auto; padding: 8px 10px; }
+
+.analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 800px) { .analytics-grid { grid-template-columns: 1fr; } }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(36,30,24,.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+.modal { width: 100%; max-width: 380px; }
