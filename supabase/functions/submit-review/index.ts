@@ -1,16 +1,9 @@
-// Supabase Edge Function: submit-review
-// Единственная точка записи в таблицу reviews.
-// Deploy: supabase functions deploy submit-review --no-verify-jwt=false
-//
-// Требуемые Secrets (задаются автоматически Supabase, ничего делать не нужно):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://review.nekruz.xyz",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 function json(body: unknown, status = 200) {
@@ -20,50 +13,58 @@ function json(body: unknown, status = 200) {
   });
 }
 
-async function sha256Hex(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+const SALT = Deno.env.get("REVIEW_SALT") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+async function hmacHex(input: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(SALT), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Эвристика "детектива": много 5★ без комментария за короткий срок на одного сотрудника
-const FLAG_WINDOW_MINUTES = 60;
-const FLAG_THRESHOLD = 3;
-
-// Таджикистан живёт в UTC+5 круглый год (перехода на летнее время нет).
 const TZ_OFFSET_HOURS = 5;
+const PER_IP_PER_EMPLOYEE_PER_DAY = 3;
+const PER_IP_PER_HOUR = 10;
+const BURST_WINDOW_MINUTES = 60;
+const BURST_THRESHOLD = 3;
 
-// Начало текущих суток по времени Таджикистана, в виде ISO-строки (UTC) для запроса к Postgres.
-// Нужно, чтобы "уже оценивал сегодня" сбрасывалось ровно в полночь по Душанбе/Худжанду,
-// а не через 24 часа от прошлого отзыва — иначе клиент, купивший вечером и вернувшийся
-// рано утром на следующий день, не смог бы оставить второй отзыв.
 function startOfLocalDayISO(): string {
-  const now = new Date();
-  const localMs = now.getTime() + TZ_OFFSET_HOURS * 60 * 60 * 1000;
-  const local = new Date(localMs);
+  const local = new Date(Date.now() + TZ_OFFSET_HOURS * 3600 * 1000);
   local.setUTCHours(0, 0, 0, 0);
-  const utcMs = local.getTime() - TZ_OFFSET_HOURS * 60 * 60 * 1000;
-  return new Date(utcMs).toISOString();
+  return new Date(local.getTime() - TZ_OFFSET_HOURS * 3600 * 1000).toISOString();
 }
 
-// IP-адреса Wi-Fi шоурумов. Клиенты никогда не подключаются к сети магазина,
-// поэтому отзыв, пришедший с одного из этих IP, гарантированно от сотрудника, а не от клиента.
-// Задаётся через Supabase Secret STORE_IPS, например: "12.34.56.78,98.76.54.32"
-// (список через запятую, без пробелов). Если secret не задан — проверка просто не применяется.
 const STORE_IPS = (Deno.env.get("STORE_IPS") || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
+function ipCandidates(req: Request): string[] {
+  const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const list = [req.headers.get("cf-connecting-ip"), req.headers.get("x-real-ip"), ...xff]
+    .map((s) => (s || "").trim())
+    .filter(Boolean);
+  return [...new Set(list)];
+}
+
+function primaryIp(req: Request): string {
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const real = req.headers.get("x-real-ip");
+  if (real) return real.trim();
+  const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return xff.length ? xff[xff.length - 1] : "unknown";
+}
+
+const genericError = () => json({ code: "SERVER_ERROR", message: "Не удалось сохранить отзыв, попробуйте позже" }, 500);
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+
+  if (req.method === "GET" && new URL(req.url).searchParams.has("myip")) {
+    return json({ ip: primaryIp(req), all: ipCandidates(req) });
   }
-  if (req.method !== "POST") {
-    return json({ code: "METHOD_NOT_ALLOWED", message: "Только POST" }, 405);
-  }
+
+  if (req.method !== "POST") return json({ code: "METHOD_NOT_ALLOWED", message: "Только POST" }, 405);
 
   let body: { employee_slug?: string; rating?: number; comment?: string; client_id?: string };
   try {
@@ -72,28 +73,25 @@ Deno.serve(async (req) => {
     return json({ code: "BAD_JSON", message: "Некорректное тело запроса" }, 400);
   }
 
-  const employeeSlug = (body.employee_slug || "").trim();
+  const employeeSlug = String(body.employee_slug || "").trim().slice(0, 100);
   const rating = Number(body.rating);
-  const comment = (body.comment || "").trim().slice(0, 500);
-  // client_id — случайный UUID, сгенерированный один раз на устройстве и сохранённый в localStorage.
-  // Нужен, чтобы разные клиенты за одним NAT/Wi-Fi шоурума (общий IP, часто похожий User-Agent)
-  // не блокировали друг друга как "уже оценивал". Если клиент его не прислал (старая версия
-  // страницы, приватный режим без localStorage) — используем пустую строку, деградация мягкая.
-  const clientId = (body.client_id || "").trim().slice(0, 100);
+  const comment = String(body.comment || "").trim().slice(0, 500);
+  const clientId = String(body.client_id || "").trim().slice(0, 100);
 
-  if (!employeeSlug) {
-    return json({ code: "MISSING_SLUG", message: "Не указан сотрудник" }, 400);
-  }
+  if (!employeeSlug) return json({ code: "MISSING_SLUG", message: "Не указан сотрудник" }, 400);
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     return json({ code: "BAD_RATING", message: "Оценка должна быть от 1 до 5" }, 400);
   }
 
+  const candidates = ipCandidates(req);
+  if (candidates.some((ip) => STORE_IPS.includes(ip))) return genericError();
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { db: { schema: "review" } },
   );
 
-  // 1. Находим активного сотрудника
   const { data: employee, error: empError } = await supabase
     .from("employees")
     .select("id, active")
@@ -104,63 +102,53 @@ Deno.serve(async (req) => {
     return json({ code: "EMPLOYEE_NOT_FOUND", message: "Сотрудник не найден или неактивен" }, 404);
   }
 
-  // 2. Серверный анти-фрод: хэш IP+UA+client_id+employee_id, окно — текущие календарные сутки (UTC+5)
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-    req.headers.get("cf-connecting-ip") ||
-    "unknown";
+  const ip = primaryIp(req);
   const userAgent = req.headers.get("user-agent") || "unknown";
+  const ipHash = await hmacHex(`ip|${ip}`);
+  const deviceHash = await hmacHex(`dev|${ip}|${userAgent}|${clientId}|${employee.id}`);
+  const dayStart = startOfLocalDayISO();
+  const hourAgo = new Date(Date.now() - 3600 * 1000).toISOString();
+  const burstSince = new Date(Date.now() - BURST_WINDOW_MINUTES * 60 * 1000).toISOString();
 
-  // Заявка с Wi-Fi шоурума — тихо отклоняем. Сообщение намеренно такое же,
-  // как при обычном сбое сервера, чтобы не выдавать сотруднику, что именно
-  // его вычислило (иначе он просто переключится на мобильный интернет).
-  if (STORE_IPS.includes(ip)) {
-    return json({ code: "SERVER_ERROR", message: "Не удалось сохранить отзыв, попробуйте позже" }, 500);
-  }
+  const count = async (q: any) => {
+    const { count, error } = await q;
+    if (error) throw error;
+    return count || 0;
+  };
+  const base = () => supabase.from("reviews").select("id", { count: "exact", head: true });
 
-  const deviceHash = await sha256Hex(`${ip}|${userAgent}|${clientId}|${employee.id}`);
-
-  const sinceStartOfDay = startOfLocalDayISO();
-
-  const { count: recentCount, error: dupError } = await supabase
-    .from("reviews")
-    .select("id", { count: "exact", head: true })
-    .eq("employee_id", employee.id)
-    .eq("device_hash", deviceHash)
-    .gte("created_at", sinceStartOfDay);
-
-  if (dupError) {
+  let sameDevice = 0, sameIpEmployeeToday = 0, sameIpHour = 0, employeeBurst = 0, fiveNoComment = 0;
+  try {
+    [sameDevice, sameIpEmployeeToday, sameIpHour, employeeBurst, fiveNoComment] = await Promise.all([
+      count(base().eq("employee_id", employee.id).eq("device_hash", deviceHash).gte("created_at", dayStart)),
+      count(base().eq("employee_id", employee.id).eq("ip_hash", ipHash).gte("created_at", dayStart)),
+      count(base().eq("ip_hash", ipHash).gte("created_at", hourAgo)),
+      count(base().eq("employee_id", employee.id).gte("created_at", burstSince)),
+      count(base().eq("employee_id", employee.id).eq("rating", 5).or("comment.is.null,comment.eq.").gte("created_at", burstSince)),
+    ]);
+  } catch {
     return json({ code: "SERVER_ERROR", message: "Ошибка сервера, попробуйте позже" }, 500);
   }
-  if ((recentCount || 0) > 0) {
+
+  if (sameDevice > 0 || sameIpEmployeeToday >= PER_IP_PER_EMPLOYEE_PER_DAY) {
     return json({ code: "ALREADY_REVIEWED", message: "Вы уже оценивали сегодня" }, 429);
   }
+  if (sameIpHour >= PER_IP_PER_HOUR) return genericError();
 
-  // 3. Эвристика для флага "подозрительный" (для ручной проверки админом)
-  const sinceFlagWindow = new Date(Date.now() - FLAG_WINDOW_MINUTES * 60 * 1000).toISOString();
-  const { count: fiveStarNoCommentCount } = await supabase
-    .from("reviews")
-    .select("id", { count: "exact", head: true })
-    .eq("employee_id", employee.id)
-    .eq("rating", 5)
-    .or("comment.is.null,comment.eq.")
-    .gte("created_at", sinceFlagWindow);
+  const flagged =
+    sameIpEmployeeToday > 0 ||
+    employeeBurst >= BURST_THRESHOLD - 1 ||
+    (rating === 5 && comment.length === 0 && fiveNoComment >= BURST_THRESHOLD - 1);
 
-  const isCurrentSuspicious = rating === 5 && comment.length === 0;
-  const flagged = isCurrentSuspicious && (fiveStarNoCommentCount || 0) >= FLAG_THRESHOLD - 1;
-
-  // 4. Запись отзыва
   const { error: insertError } = await supabase.from("reviews").insert({
     employee_id: employee.id,
     rating,
     comment: comment || null,
     device_hash: deviceHash,
+    ip_hash: ipHash,
     flagged,
   });
 
-  if (insertError) {
-    return json({ code: "INSERT_FAILED", message: "Не удалось сохранить отзыв" }, 500);
-  }
-
+  if (insertError) return json({ code: "INSERT_FAILED", message: "Не удалось сохранить отзыв" }, 500);
   return json({ success: true });
 });

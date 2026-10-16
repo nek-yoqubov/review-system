@@ -6,6 +6,8 @@
   // /select?branch=khujand  (укажите этот параметр в QR-ссылке филиала)
   const branch = params.get("branch");
 
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
   const listEl = document.getElementById("employee-list");
   const labelEl = document.getElementById("branch-label");
 
@@ -36,11 +38,11 @@
       a.href = `review.html?m=${encodeURIComponent(emp.slug)}`;
       a.innerHTML = `
         <div class="employee__avatar" style="width:40px;height:40px;font-size:14px;">
-          ${emp.full_name.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
+          ${esc(emp.full_name.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join("").toUpperCase())}
         </div>
         <div>
-          <div style="font-weight:600;">${emp.full_name}</div>
-          <div class="employee__meta">${ROLE_LABELS[emp.role] || emp.role}${branch ? "" : " · " + (BRANCH_LABELS[emp.branch] || emp.branch)}</div>
+          <div style="font-weight:600;">${esc(emp.full_name)}</div>
+          <div class="employee__meta">${esc(ROLE_LABELS[emp.role] || emp.role)}${branch ? "" : " · " + esc(BRANCH_LABELS[emp.branch] || emp.branch)}</div>
         </div>`;
       listEl.appendChild(a);
     });

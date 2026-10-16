@@ -34,6 +34,7 @@
   // ---------------------------------------------------------
   // Авторизация
   // ---------------------------------------------------------
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let currentRole = null; // 'admin' | 'viewer'
 
   async function tryEnterApp() {
@@ -140,17 +141,17 @@
     rows.forEach((emp) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${emp.full_name}</td>
-        <td>${ROLE_LABELS[emp.role] || emp.role}</td>
-        <td>${BRANCH_LABELS[emp.branch] || emp.branch}</td>
+        <td>${esc(emp.full_name)}</td>
+        <td>${esc(ROLE_LABELS[emp.role] || emp.role)}</td>
+        <td>${esc(BRANCH_LABELS[emp.branch] || emp.branch)}</td>
         <td>${emp.reviews_count > 0 ? emp.avg_rating : "—"}</td>
         <td>${emp.reviews_count}${emp.flagged_count > 0 ? ` <span class="badge badge--flag">${emp.flagged_count} флаг</span>` : ""}</td>
         <td><span class="badge ${emp.active ? "badge--active" : "badge--inactive"}">${emp.active ? "Активен" : "Уволен"}</span></td>
         <td>
           <div class="row-actions">
-            <button data-action="qr" data-slug="${emp.slug}" data-name="${emp.full_name}">QR</button>
-            <button data-action="edit" data-id="${emp.id}">✎</button>
-            <button data-action="toggle" data-id="${emp.id}" data-active="${emp.active}">${emp.active ? "Деактивировать" : "Восстановить"}</button>
+            <button data-action="qr" data-slug="${esc(emp.slug)}" data-name="${esc(emp.full_name)}">QR</button>
+            <button data-action="edit" data-id="${esc(emp.id)}">✎</button>
+            <button data-action="toggle" data-id="${esc(emp.id)}" data-active="${emp.active}">${emp.active ? "Деактивировать" : "Восстановить"}</button>
           </div>
         </td>`;
       tbody.appendChild(tr);
@@ -259,7 +260,7 @@
     const sel = $("filter-employee");
     const current = sel.value;
     sel.innerHTML = `<option value="">Все сотрудники</option>` +
-      rows.map((e) => `<option value="${e.id}">${e.full_name}</option>`).join("");
+      rows.map((e) => `<option value="${esc(e.id)}">${esc(e.full_name)}</option>`).join("");
     sel.value = current;
   }
 
@@ -301,10 +302,10 @@
     tbody.innerHTML = rows.map((r) => `
       <tr>
         <td>${new Date(r.created_at).toLocaleString("ru-RU")}</td>
-        <td>${r.employees?.full_name || "—"}</td>
+        <td>${esc(r.employees?.full_name || "—")}</td>
         <td>${BRANCH_LABELS[r.employees?.branch] || "—"}</td>
-        <td>${"●".repeat(r.rating)}${"○".repeat(5 - r.rating)}</td>
-        <td>${r.comment ? r.comment : "<span class='hint'>без комментария</span>"}</td>
+        <td>${"●".repeat(Math.max(0, Math.min(5, r.rating | 0)))}${"○".repeat(5 - Math.max(0, Math.min(5, r.rating | 0)))}</td>
+        <td>${r.comment ? esc(r.comment) : "<span class='hint'>без комментария</span>"}</td>
         <td>${r.flagged ? `<span class="badge badge--flag">подозрительный</span>` : ""}</td>
       </tr>
     `).join("");

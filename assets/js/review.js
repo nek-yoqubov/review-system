@@ -15,7 +15,7 @@
   let employee = null;
 
   function storageKey(empSlug) {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (локальная дата устройства)
+    const today = new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
     return `reviewed_${empSlug}_${today}`;
   }
 
